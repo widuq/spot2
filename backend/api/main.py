@@ -55,7 +55,8 @@ def read_root():
 
 
 @app.get("/search")
-async def search_get(q: str = Query(..., min_length=1, description="Texto de búsqueda")):
+
+async def search_get(q: str = Query(min_length=1, description="Texto de búsqueda")):
     """RF-04 — Búsqueda vía GET (conveniente para pruebas manuales).
 
     Retorna canciones que coincidan semánticamente o léxicamente con la query.

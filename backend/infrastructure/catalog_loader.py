@@ -27,3 +27,4 @@ class CatalogLoader:
         except json.JSONDecodeError as e:
             logger.error(f"Error parseando catálogo | error={e}")
             raise
+        
