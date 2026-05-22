@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "title": "Yellow",
+    "artist": "Coldplay",
+    "genre": "Alternative Rock",
+    "mood": "romantic melancholic",
+    "tempo": "slow",
+    "description": "A romantic song about unconditional devotion and love written for a partner"
+  },
+  {
+    "id": 2,
+    "title": "Fix You",
+    "artist": "Coldplay",
+    "genre": "Alternative Rock",
+    "mood": "emotional hopeful",
+    "tempo": "slow",
+    "description": "A comforting ballad about healing grief and offering support to someone you love"
+  },
+  {
+    "id": 3,
+    "title": "The Scientist",
+    "artist": "Coldplay",
+    "genre": "Alternative Rock",
+    "mood": "sad nostalgic",
+    "tempo": "slow",
+    "description": "A melancholic piano-driven breakup song told in reverse about regret and loss"
+  },
+  {
+    "id": 4,
+    "title": "Blinding Lights",
+    "artist": "The Weeknd",
+    "genre": "Synthpop",
+    "mood": "energetic nostalgic",
+    "tempo": "fast",
+    "description": "An energetic 80s-inspired synth track about needing someone desperately in the night"
+  },
+  {
+    "id": 5,
+    "title": "Shape of You",
+    "artist": "Ed Sheeran",
+    "genre": "Pop",
+    "mood": "happy playful",
+    "tempo": "medium",
+    "description": "A danceable pop song about physical attraction and falling in love at a bar"
+  },
+  {
+    "id": 6,
+    "title": "Bohemian Rhapsody",
+    "artist": "Queen",
+    "genre": "Classic Rock",
+    "mood": "dramatic operatic",
+    "tempo": "variable",
+    "description": "An epic rock opera with multiple movements telling a story of guilt and redemption"
+  },
+  {
+    "id": 7,
+    "title": "Hotel California",
+    "artist": "Eagles",
+    "genre": "Classic Rock",
+    "mood": "mysterious dark",
+    "tempo": "medium",
+    "description": "A classic rock song with mysterious and dark lyrics about excess and being trapped"
+  },
+  {
+    "id": 8,
+    "title": "Imagine",
+    "artist": "John Lennon",
+    "genre": "Pop",
+    "mood": "peaceful hopeful",
+    "tempo": "slow",
+    "description": "A peaceful anthem imagining a world of unity brotherhood and peace without borders"
+  },
+  {
+    "id": 9,
+    "title": "Smells Like Teen Spirit",
+    "artist": "Nirvana",
+    "genre": "Grunge",
+    "mood": "aggressive rebellious",
+    "tempo": "fast",
+    "description": "The defining grunge anthem of the 90s expressing teenage apathy and rebellion"
+  },
+  {
+    "id": 10,
+    "title": "Rolling in the Deep",
+    "artist": "Adele",
+    "genre": "Soul Pop",
+    "mood": "powerful angry",
+    "tempo": "medium",
+    "description": "A powerful breakup anthem with soulful vocals about betrayal and wasted potential"
+  }
+]

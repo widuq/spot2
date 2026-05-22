@@ -1,25 +1,182 @@
-name: Python Tests  # Nombre del proceso
+# ─────────────────────────────────────────────────────────────────────────────
+# CI — Spotify Search 2.0
+# Universidad del Quindío — Ingeniería de Software II
+#
+# Pipeline: Build → Lint → Unit Tests → Integration Tests
+# Quality gate: cobertura mínima 80 % (bloquea merge si no se cumple)
+# Cada trabajo falla de forma independiente → los fallos son distinguibles
+# ─────────────────────────────────────────────────────────────────────────────
 
-on: [push, pull_request] # Se activa cuando subes código
+name: CI — Spotify Search 2.0
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+# Cancelar ejecuciones anteriores del mismo PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest # Usa un servidor Ubuntu de GitHub
+
+  # ── 1. BUILD + ANÁLISIS ESTÁTICO ─────────────────────────────────────────
+  build-and-lint:
+    name: "🔨 Build & Lint"
+    runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4 # Descarga tu código
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12' # La misma versión del proyecto
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt # Instala FastAPI, Numpy, Pytest, etc.
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
 
-    - name: Run Tests
-      run: |
-        # Aquí le decimos al servidor que corra tus tests unitarios
-        python -m pytest tests/unit/test_engine.py
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint — flake8 (análisis estático)
+        # quality gate: cero errores E/W críticos; líneas ≤ 120 chars
+        run: |
+          flake8 backend/ \
+            --max-line-length=120 \
+            --extend-ignore=E203,W503 \
+            --statistics \
+            --count
+        # Si flake8 encuentra errores, este job falla → bloquea merge
+
+      - name: Verificar ausencia de secretos hardcodeados
+        # Busca patrones de credenciales hardcodeadas (criterio de seguridad)
+        run: |
+          python - <<'EOF'
+          import sys, re, pathlib
+          PATRONES = [
+              r'password\s*=\s*["\'][^"\']+["\']',
+              r'secret\s*=\s*["\'][^"\']+["\']',
+              r'api_key\s*=\s*["\'][^"\']+["\']',
+              r'token\s*=\s*["\'][^"\']+["\']',
+          ]
+          archivos = list(pathlib.Path("backend").rglob("*.py"))
+          hallazgos = []
+          for f in archivos:
+              texto = f.read_text(encoding="utf-8")
+              for pat in PATRONES:
+                  if re.search(pat, texto, re.IGNORECASE):
+                      hallazgos.append(f"{f}: patrón {pat!r}")
+          if hallazgos:
+              print("❌ Secretos hardcodeados detectados:")
+              for h in hallazgos:
+                  print(f"  {h}")
+              sys.exit(1)
+          print("✅ Sin secretos hardcodeados")
+          EOF
+
+  # ── 2. PRUEBAS UNITARIAS + QUALITY GATE DE COBERTURA ─────────────────────
+  test-unit:
+    name: "🧪 Unit Tests (cobertura ≥ 80%)"
+    runs-on: ubuntu-latest
+    needs: build-and-lint  # solo corre si el build pasa
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests with coverage
+        # --cov-fail-under=80 es el QUALITY GATE: bloquea el merge si la
+        # cobertura de las pruebas unitarias cae por debajo del 80%
+        run: |
+          pytest tests/unit/ \
+            --cov=backend \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage-unit.xml \
+            --cov-fail-under=80 \
+            -v
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-unit
+          path: coverage-unit.xml
+
+  # ── 3. PRUEBAS DE INTEGRACIÓN ─────────────────────────────────────────────
+  test-integration:
+    name: "🔗 Integration Tests"
+    runs-on: ubuntu-latest
+    needs: build-and-lint  # corre en paralelo con unit tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run integration tests
+        # Las pruebas de integración usan TestClient — no requieren servidor real
+        run: |
+          pytest tests/integration/ \
+            --cov=backend \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage-integration.xml \
+            -v
+
+      - name: Upload integration coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-integration
+          path: coverage-integration.xml
+
+  # ── 4. REPORTE FINAL ──────────────────────────────────────────────────────
+  summary:
+    name: "📋 CI Summary"
+    runs-on: ubuntu-latest
+    needs: [test-unit, test-integration]
+    if: always()
+
+    steps:
+      - name: Verificar resultado de todos los jobs
+        run: |
+          echo "Build & Lint : ${{ needs.build-and-lint.result }}"
+          echo "Unit Tests   : ${{ needs.test-unit.result }}"
+          echo "Integration  : ${{ needs.test-integration.result }}"
+
+          if [[ "${{ needs.test-unit.result }}" != "success" ]]; then
+            echo "❌ Unit tests fallaron o quality gate no cumplido (cobertura < 80%)"
+            exit 1
+          fi
+          if [[ "${{ needs.test-integration.result }}" != "success" ]]; then
+            echo "❌ Integration tests fallaron"
+            exit 1
+          fi
+          echo "✅ CI completo — todos los checks pasaron"

@@ -6,6 +6,13 @@ logger = logging.getLogger(__name__)
 
 
 class OllamaClient:
+    """Cliente HTTP para el servicio Ollama (LLM local opcional).
+
+    Sin hardcoding de credenciales — toda configuración viene de variables
+    de entorno. El timeout corto garantiza que un Ollama caído no bloquee
+    el flujo principal: el orquestador captura el TimeoutError y activa
+    el fallback léxico (RF-03).
+    """
 
     def __init__(self):
         # Sin hardcoding — cubre criterio de seguridad de la guía
