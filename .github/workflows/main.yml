@@ -1,0 +1,25 @@
+name: Python Tests  # Nombre del proceso
+
+on: [push, pull_request] # Se activa cuando subes código
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Usa un servidor Ubuntu de GitHub
+
+    steps:
+    - uses: actions/checkout@v4 # Descarga tu código
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12' # La misma versión del proyecto
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt # Instala FastAPI, Numpy, Pytest, etc.
+
+    - name: Run Tests
+      run: |
+        # Aquí le decimos al servidor que corra tus tests unitarios
+        python -m pytest tests/unit/test_engine.py
