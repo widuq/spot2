@@ -7,14 +7,16 @@ from unittest.mock import MagicMock, patch
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _make_engine(vector_store=None):
-    """Crea SemanticEngine con modelo SBERT mockeado."""
+    """Crea SemanticEngine parcheando sentence_transformers a nivel de paquete."""
     if vector_store is None:
         vector_store = MagicMock()
 
     mock_model = MagicMock()
     mock_model.encode.return_value = np.array([1.0, 0.0, 0.0])
 
-    with patch("backend.domain.semantic_engine.SentenceTransformer", return_value=mock_model):
+    # SentenceTransformer se importa DENTRO de _cargar_modelo, hay que parchear
+    # el paquete fuente, no el módulo que lo usa.
+    with patch("sentence_transformers.SentenceTransformer", return_value=mock_model):
         from backend.domain.semantic_engine import SemanticEngine
         engine = SemanticEngine(vector_store)
 
@@ -24,16 +26,16 @@ def _make_engine(vector_store=None):
 # ── Constructor ───────────────────────────────────────────────────────────────
 
 def test_deberia_cargar_modelo_sbert_al_inicializar():
-    with patch("backend.domain.semantic_engine.SentenceTransformer") as mock_cls:
-        mock_cls.return_value = MagicMock()
-        mock_cls.return_value.encode.return_value = np.array([1.0])
+    mock_model = MagicMock()
+    mock_model.encode.return_value = np.array([1.0])
+    with patch("sentence_transformers.SentenceTransformer", return_value=mock_model) as mock_cls:
         from backend.domain.semantic_engine import SemanticEngine
         SemanticEngine(MagicMock())
         mock_cls.assert_called_once()
 
 
 def test_deberia_lanzar_excepcion_cuando_sbert_no_esta_disponible():
-    with patch("backend.domain.semantic_engine.SentenceTransformer", side_effect=ImportError("no module")):
+    with patch("sentence_transformers.SentenceTransformer", side_effect=RuntimeError("sin modelo")):
         from backend.domain.semantic_engine import SemanticEngine
         with pytest.raises(Exception):
             SemanticEngine(MagicMock())

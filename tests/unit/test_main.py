@@ -4,25 +4,33 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+RESULTADO_MOCK = {
+    "query": "test",
+    "results": [],
+    "total": 0,
+    "fallback_active": False,
+    "search_type": "hybrid",
+}
+
 
 @pytest.fixture
-def client():
-    """Cliente de prueba con motor mockeado."""
-    with patch("backend.api.main.HybridSearchEngine") as mock_engine_cls:
-        mock_engine = MagicMock()
-        mock_engine_cls.return_value = mock_engine
-        mock_engine.execute_search.return_value = {
-            "query": "test",
-            "results": [],
-            "total": 0,
-            "fallback_active": False,
-            "search_type": "hybrid",
-        }
-        from backend.api.main import app
-        with TestClient(app) as c:
-            c.app_engine = mock_engine
-            yield c
+def mock_engine():
+    """Motor mockeado inyectado directamente en el módulo main."""
+    engine = MagicMock()
+    engine.execute_search.return_value = RESULTADO_MOCK
+    return engine
+
+
+@pytest.fixture
+def client(mock_engine):
+    """TestClient con engine parcheado a nivel de módulo (no constructor)."""
+    import backend.api.main as main_module
+    original = main_module.engine
+    main_module.engine = mock_engine
+    from backend.api.main import app
+    with TestClient(app) as c:
+        yield c
+    main_module.engine = original
 
 
 # ── GET / ─────────────────────────────────────────────────────────────────────
@@ -55,14 +63,14 @@ def test_health_deberia_incluir_nombre_engine(client):
 
 # ── GET /search ───────────────────────────────────────────────────────────────
 
-def test_search_get_deberia_retornar_200_con_query_valida(client):
+def test_search_get_deberia_retornar_200_con_query_valida(client, mock_engine):
     response = client.get("/search?q=coldplay")
     assert response.status_code == 200
 
 
-def test_search_get_deberia_llamar_execute_search(client):
+def test_search_get_deberia_llamar_execute_search(client, mock_engine):
     client.get("/search?q=coldplay")
-    client.app_engine.execute_search.assert_called_once_with("coldplay")
+    mock_engine.execute_search.assert_called_once_with("coldplay")
 
 
 def test_search_get_deberia_retornar_422_cuando_query_vacia(client):
@@ -70,14 +78,14 @@ def test_search_get_deberia_retornar_422_cuando_query_vacia(client):
     assert response.status_code == 422
 
 
-def test_search_get_deberia_retornar_422_cuando_engine_lanza_value_error(client):
-    client.app_engine.execute_search.side_effect = ValueError("query inválida")
+def test_search_get_deberia_retornar_422_cuando_engine_lanza_value_error(client, mock_engine):
+    mock_engine.execute_search.side_effect = ValueError("query inválida")
     response = client.get("/search?q=test")
     assert response.status_code == 422
 
 
-def test_search_get_deberia_retornar_500_cuando_engine_lanza_excepcion(client):
-    client.app_engine.execute_search.side_effect = RuntimeError("fallo interno")
+def test_search_get_deberia_retornar_500_cuando_engine_lanza_excepcion(client, mock_engine):
+    mock_engine.execute_search.side_effect = RuntimeError("fallo interno")
     response = client.get("/search?q=test")
     assert response.status_code == 500
 
@@ -89,19 +97,19 @@ def test_search_post_deberia_retornar_200_con_body_valido(client):
     assert response.status_code == 200
 
 
-def test_search_post_deberia_llamar_execute_search(client):
+def test_search_post_deberia_llamar_execute_search(client, mock_engine):
     client.post("/search", json={"q": "adele"})
-    client.app_engine.execute_search.assert_called_once_with("adele")
+    mock_engine.execute_search.assert_called_once_with("adele")
 
 
-def test_search_post_deberia_retornar_422_cuando_engine_lanza_value_error(client):
-    client.app_engine.execute_search.side_effect = ValueError("query inválida")
+def test_search_post_deberia_retornar_422_cuando_engine_lanza_value_error(client, mock_engine):
+    mock_engine.execute_search.side_effect = ValueError("query inválida")
     response = client.post("/search", json={"q": "test"})
     assert response.status_code == 422
 
 
-def test_search_post_deberia_retornar_500_cuando_engine_lanza_excepcion(client):
-    client.app_engine.execute_search.side_effect = RuntimeError("fallo")
+def test_search_post_deberia_retornar_500_cuando_engine_lanza_excepcion(client, mock_engine):
+    mock_engine.execute_search.side_effect = RuntimeError("fallo")
     response = client.post("/search", json={"q": "test"})
     assert response.status_code == 500
 
