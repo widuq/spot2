@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Annotated
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -55,7 +56,7 @@ def read_root():
 
 
 @app.get("/search")
-async def search_get(q: str = Query(min_length=1, description="Texto de búsqueda")):
+async def search_get(q: Annotated[str, Query(min_length=1, description="Texto de búsqueda")]):
     """RF-04 — Búsqueda vía GET (conveniente para pruebas manuales).
 
     Retorna canciones que coincidan semánticamente o léxicamente con la query.
