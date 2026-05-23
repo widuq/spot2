@@ -7,16 +7,13 @@ from unittest.mock import MagicMock, patch
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _make_engine(vector_store=None):
-    """Crea SemanticEngine parcheando sentence_transformers a nivel de paquete."""
     if vector_store is None:
         vector_store = MagicMock()
 
     mock_model = MagicMock()
     mock_model.encode.return_value = np.array([1.0, 0.0, 0.0])
 
-    # SentenceTransformer se importa DENTRO de _cargar_modelo, hay que parchear
-    # el paquete fuente, no el módulo que lo usa.
-    with patch("sentence_transformers.SentenceTransformer", return_value=mock_model):
+    with patch("backend.domain.semantic_engine.SentenceTransformer", return_value=mock_model):
         from backend.domain.semantic_engine import SemanticEngine
         engine = SemanticEngine(vector_store)
 
@@ -28,14 +25,14 @@ def _make_engine(vector_store=None):
 def test_deberia_cargar_modelo_sbert_al_inicializar():
     mock_model = MagicMock()
     mock_model.encode.return_value = np.array([1.0])
-    with patch("sentence_transformers.SentenceTransformer", return_value=mock_model) as mock_cls:
+    with patch("backend.domain.semantic_engine.SentenceTransformer", return_value=mock_model) as mock_cls:
         from backend.domain.semantic_engine import SemanticEngine
         SemanticEngine(MagicMock())
         mock_cls.assert_called_once()
 
 
 def test_deberia_lanzar_excepcion_cuando_sbert_no_esta_disponible():
-    with patch("sentence_transformers.SentenceTransformer", side_effect=RuntimeError("sin modelo")):
+    with patch("backend.domain.semantic_engine.SentenceTransformer", side_effect=RuntimeError("sin modelo")):
         from backend.domain.semantic_engine import SemanticEngine
         with pytest.raises(Exception):
             SemanticEngine(MagicMock())
@@ -98,8 +95,10 @@ def test_deberia_indexar_todas_las_canciones_del_catalogo():
     vector_store = MagicMock()
     engine, _, _ = _make_engine(vector_store)
     catalogo = [
-        {"id": "1", "title": "Yellow", "artist": "Coldplay", "genre": "rock", "mood": "sad", "description": ""},
-        {"id": "2", "title": "Hello", "artist": "Adele", "genre": "pop", "mood": "sad", "description": ""},
+        {"id": "1", "title": "Yellow", "artist": "Coldplay",
+         "genre": "rock", "mood": "sad", "description": ""},
+        {"id": "2", "title": "Hello", "artist": "Adele",
+         "genre": "pop", "mood": "sad", "description": ""},
     ]
     engine.indexar_catalogo(catalogo)
     assert vector_store.add_to_inventory.call_count == 2

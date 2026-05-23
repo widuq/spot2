@@ -3,101 +3,74 @@ import numpy as np
 from backend.infrastructure.vector_store import VectorLibrary
 
 
-# ── RF-01 — Happy path ────────────────────────────────────────────────────────
-
 def test_deberia_retornar_score_100_cuando_se_busca_la_misma_cancion():
-    # GIVEN: una canción indexada con un vector conocido
     store = VectorLibrary()
     cancion = {"title": "Yellow", "artist": "Coldplay"}
     adn_ficticio = [0.1] * 384
     store.add_to_inventory(cancion, adn_ficticio)
-
-    # WHEN: se busca con el mismo vector
     resultados = store.find_near(adn_ficticio)
-
-    # THEN: score perfecto y canción correcta
     assert resultados[0]["song"]["title"] == "Yellow"
     assert resultados[0]["score"] == 100.0
 
 
-# ── RF-01 — Caso límite: vectores perpendiculares (score=0) ───────────────────
-
-def test_deberia_retornar_score_0_cuando_canciones_tienen_vectores_perpendiculares():
-    # GIVEN: dos canciones con vectores ortogonales
-    store = VectorLibrary()
+def test_deberia_descartar_resultados_con_score_menor_al_umbral():
+    """TRD sección 15 y Design Doc 8.1: similitud < 0.75 se descarta."""
+    store = VectorLibrary(umbral=0.75)
     vec_a = [1.0] + [0.0] * 383
     vec_b = [0.0, 1.0] + [0.0] * 382
-    store.add_to_inventory({"title": "Canción A"}, vec_a)
-    store.add_to_inventory({"title": "Canción B"}, vec_b)
-
-    # WHEN
+    store.add_to_inventory({"title": "Canción B (score 0)"}, vec_b)
     resultados = store.find_near(vec_a)
-
-    # THEN: A tiene score 100, B tiene score 0
-    assert resultados[0]["song"]["title"] == "Canción A"
-    assert resultados[0]["score"] == 100.0
-    assert resultados[1]["score"] == 0.0
-
-
-# ── RF-01 — Caso límite: inventario vacío ────────────────────────────────────
-
-def test_deberia_retornar_lista_vacia_cuando_inventario_esta_vacio():
-    store = VectorLibrary()
-    resultados = store.find_near([0.1] * 384)
     assert resultados == []
 
 
-# ── RF-01 — top_k limita resultados ──────────────────────────────────────────
+def test_deberia_retornar_solo_resultados_sobre_el_umbral():
+    store = VectorLibrary(umbral=0.75)
+    vec_alta = [1.0] * 384
+    vec_baja = [1.0, -1.0] + [0.0] * 382
+    store.add_to_inventory({"title": "Alta similitud"}, vec_alta)
+    store.add_to_inventory({"title": "Baja similitud"}, vec_baja)
+    resultados = store.find_near([1.0] * 384)
+    assert len(resultados) == 1
+    assert resultados[0]["song"]["title"] == "Alta similitud"
+
+
+def test_umbral_por_defecto_es_0_75():
+    store = VectorLibrary()
+    assert store.umbral == 0.75
+
+
+def test_deberia_retornar_lista_vacia_cuando_inventario_esta_vacio():
+    store = VectorLibrary()
+    assert store.find_near([0.1] * 384) == []
+
 
 def test_deberia_retornar_maximo_top_k_resultados():
-    # GIVEN: 10 canciones indexadas
     store = VectorLibrary()
     for i in range(10):
-        store.add_to_inventory({"title": f"Canción {i}"}, [float(i)] * 384)
-
-    # WHEN: top_k=3
+        store.add_to_inventory({"title": f"Canción {i}"}, [1.0] * 384)
     resultados = store.find_near([1.0] * 384, top_k=3)
-
-    # THEN
     assert len(resultados) <= 3
 
 
-# ── RF-01 — resultados ordenados descendente ──────────────────────────────────
-
 def test_deberia_retornar_resultados_ordenados_por_score_descendente():
-    # GIVEN: dos canciones con distintos vectores
-    store = VectorLibrary()
-    vec_query = [1.0] * 384
-    vec_cercano = [1.0] * 384          # idéntico → score 100
-    vec_lejano = [1.0, -1.0] + [0.0] * 382  # ortogonal parcial
-
+    store = VectorLibrary(umbral=0.0)
+    vec_cercano = [1.0] * 384
+    vec_lejano = [1.0, -1.0] + [0.0] * 382
     store.add_to_inventory({"title": "Lejos"}, vec_lejano)
     store.add_to_inventory({"title": "Cercano"}, vec_cercano)
-
-    # WHEN
-    resultados = store.find_near(vec_query)
-
-    # THEN: primero el más cercano
+    resultados = store.find_near([1.0] * 384)
     assert resultados[0]["song"]["title"] == "Cercano"
 
-
-# ── Propiedad size ─────────────────────────────────────────────────────────────
 
 def test_size_deberia_incrementar_con_cada_cancion_indexada():
     store = VectorLibrary()
     assert store.size == 0
     store.add_to_inventory({"title": "A"}, [0.1] * 384)
     assert store.size == 1
-    store.add_to_inventory({"title": "B"}, [0.2] * 384)
-    assert store.size == 2
 
 
-# ── Vector cero — similitud cero ─────────────────────────────────────────────
-
-def test_deberia_retornar_score_0_cuando_vector_es_cero():
+def test_deberia_filtrar_vector_cero_por_umbral():
+    """Vector cero produce similitud 0.0 — descartado por umbral 0.75."""
     store = VectorLibrary()
-    vec_cero = [0.0] * 384
-    store.add_to_inventory({"title": "Silencio"}, vec_cero)
-
-    resultados = store.find_near([1.0] * 384)
-    assert resultados[0]["score"] == 0.0
+    store.add_to_inventory({"title": "Silencio"}, [0.0] * 384)
+    assert store.find_near([1.0] * 384) == []

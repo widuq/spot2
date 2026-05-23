@@ -18,7 +18,7 @@ def test_deberia_retornar_score_100_cuando_se_busca_la_misma_cancion():
 
 # RF-01 — Caso límite: vectores perpendiculares
 def test_deberia_retornar_score_0_cuando_canciones_tienen_vectores_perpendiculares():
-    store = VectorLibrary()
+    store = VectorLibrary(umbral=0.0)  # sin umbral para este test específico
     vec_a = [1.0] + [0.0] * 383
     vec_b = [0.0, 1.0] + [0.0] * 382
     store.add_to_inventory({"title": "Canción A"}, vec_a)

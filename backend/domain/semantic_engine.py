@@ -1,3 +1,7 @@
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
 import logging
 import os
 import numpy as np
@@ -23,7 +27,8 @@ class SemanticEngine:
 
     def _cargar_modelo(self):
         try:
-            from sentence_transformers import SentenceTransformer
+            if SentenceTransformer is None:
+                raise ImportError("sentence_transformers no está instalado")
             nombre_modelo = os.getenv(
                 "SBERT_MODEL",
                 "paraphrase-multilingual-MiniLM-L12-v2"
