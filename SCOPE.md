@@ -1,12 +1,12 @@
 # SCOPE.md — Alcance Declarado
 
 > **Proyecto:** Spotify Search 2.0 — Motor de búsqueda híbrida  
-> **Equipo:** Yamis, Mariana Ramírez Colorado, Wison Delgado Viveros  
+> **Equipo:** Yamileth Londoño Burgos, Mariana Ramírez Colorado, Wison Delgado Viveros  
 > **Curso:** Ingeniería de Software II — Universidad del Quindío  
 > **Stack:** FastAPI / Python 3.12
 
 Este documento especifica qué requisitos del TRD se implementaron y cuáles no,
-con justificación explícita. Es el primer artefacto que lee el evaluador.
+con justificación explícita.
 
 ---
 
@@ -14,11 +14,11 @@ con justificación explícita. Es el primer artefacto que lee el evaluador.
 
 | RF    | Descripción                                                       | Estado                                   |
 |-------|-------------------------------------------------------------------|------------------------------------------|
-| RF-01 | Transformar consultas en embeddings vectoriales (SBERT)           | ✅ Implementado                          |
-| RF-02 | Orquestación híbrida: priorizar coincidencia exacta               | ✅ Implementado                          |
-| RF-03 | Fallback léxico ante fallo del motor semántico                    | ✅ Implementado                          |
-| RF-04 | Endpoint `POST /search` que retorna resultados combinados         | ✅ Implementado (GET disponible también) |
-| RF-05 | Ordenar resultados por score combinado (léxico + semántico 70/30) | ❌ No implementado — ver justificación   |
+| RF-01 | Transformar consultas en embeddings vectoriales (SBERT)           | ✔ Implementado                          |
+| RF-02 | Orquestación híbrida: priorizar coincidencia exacta               | ✔ Implementado                          |
+| RF-03 | Fallback léxico ante fallo del motor semántico                    | ✔ Implementado                          |
+| RF-04 | Endpoint `POST /search` que retorna resultados combinados         | ✔ Implementado (GET disponible también) |
+| RF-05 | Ordenar resultados por score combinado (léxico + semántico 70/30) | ✖ No implementado — ver justificación   |
 
 ### RF-05 — Justificación de no implementación
 
@@ -36,13 +36,13 @@ rompe los tests existentes.
 
 | Criterio TRD                                  | Estado       | Dónde verificarlo                        |
 |-----------------------------------------------|--------------|------------------------------------------|
-| Cobertura de tests unitarios ≥ 80%            | ✅ 94%       | CI job "Unit Tests (cobertura ≥ 80%)"   |
-| Umbral similitud coseno ≥ 0.75                | ✅ Implementado | `vector_store.py` — `UMBRAL_SIMILITUD` |
-| Fallback automático ante timeout              | ✅ Implementado | `orchestrator.py` — RF-03              |
-| Logs estructurados en flujos críticos         | ✅ Implementado | Todos los módulos usan `logger` JSON    |
-| Sin secretos hardcodeados                     | ✅ Verificado en CI | Step "Verificar secretos" en pipeline |
-| Latencia p95 ≤ 300ms                          | ⚠️ No validable | Sin infraestructura cloud disponible   |
-| Disponibilidad ≥ 99.9%                        | ⚠️ No validable | Sin infraestructura cloud disponible   |
+| Cobertura de tests unitarios ≥ 80%            | ✔ 94%       | CI job "Unit Tests (cobertura ≥ 80%)"   |
+| Umbral similitud coseno ≥ 0.75                | ✔ Implementado | `vector_store.py` — `UMBRAL_SIMILITUD` |
+| Fallback automático ante timeout              | ✔ Implementado | `orchestrator.py` — RF-03              |
+| Logs estructurados en flujos críticos         | ✔ Implementado | Todos los módulos usan `logger` JSON    |
+| Sin secretos hardcodeados                     | ✔ Verificado en CI | Step "Verificar secretos" en pipeline |
+| Latencia p95 ≤ 300ms                          | ⚠︎ No validable | Sin infraestructura cloud disponible   |
+| Disponibilidad ≥ 99.9%                        | ⚠︎ No validable | Sin infraestructura cloud disponible   |
 
 ---
 
@@ -90,24 +90,4 @@ rompe los tests existentes.
 
 ## Estructura del repositorio
 
-spot2/
-├── .github/workflows/ci.yml          # Pipeline CI: Build+Lint → Unit Tests → Integration
-├── backend/
-│   ├── api/main.py                   # FastAPI — POST /search + GET /search (RF-04)
-│   ├── application/orchestrator.py   # RF-02 (exacta) + RF-03 (fallback)
-│   ├── domain/semantic_engine.py     # RF-01 — Motor semántico SBERT
-│   ├── infrastructure/
-│   │   ├── vector_store.py           # VectorLibrary — similitud coseno + umbral 0.75
-│   │   ├── lexical_engine.py         # Motor léxico — búsqueda por texto ponderada
-│   │   ├── catalog_loader.py         # Carga data/catalog.json
-│   │   └── ollama_client.py          # Cliente HTTP opcional para LLM
-│   └── services/search_engine.py     # HybridSearchEngine — punto de entrada
-├── data/catalog.json                 # 10 canciones de prueba
-├── tests/
-│   ├── unit/                         # 39 tests — cobertura 94%
-│   └── integration/                  # 12 tests — contrato API completo
-├── SCOPE.md                          # Este documento (obligatorio)
-├── conftest.py
-├── requirements.txt
-├── pytest.ini
-└── .env.example
+![alt text](image.png)
